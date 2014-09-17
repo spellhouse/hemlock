@@ -1,8 +1,6 @@
 (ns hemlock.core
   (:require
-   [clojure.zip :as z]
-   [schema.core :as s]
-   [schema.macros :as sm]))
+   [clojure.zip :as z]))
 
 ;; ---------------------------------------------------------------------
 ;; Utilities
@@ -69,23 +67,6 @@
   [x fs]
   (reduce (fn [x' f] (f x')) x fs))
 
-;; Currently awaiting the next version of schema to drop this.
-
-(defrecord Isa [h parent]
-  s/Schema
-  (walker [this]
-    (fn [child]
-      (if (or (and h (isa? h child parent))
-            (isa? child parent))
-        child
-        (sm/validation-error this child (list 'isa? child parent)))))
-  (explain [this]
-    (list 'isa? parent)))
-
-(defn isa
-  ([parent] (Isa. nil parent))
-  ([h parent] (Isa. h parent)))
-
 
 ;; ---------------------------------------------------------------------
 ;; Location functions
@@ -111,17 +92,21 @@
 ;; Term
 
 (defn make-term
-  [{:keys [tag schema]
-    :or {schema s/Any}}]
-  (fn [& edits]
-    (fn [ploc]
+  "Return a function f which accepts a variable number of unary 
+  functions which operate on a zipper and returns a unary function g of
+  a zipper that appends tag and applicates edits to it. Before g returns
+  the editted tag may be validated with validator. g returns focus to the
+  to the original location."
+  [{:keys [tag validator] :or {validator identity}}]
+  (fn f [& edits]
+    (fn g [ploc]
       (let [cloc (-> ploc
                      (z/append-child tag)
                      (z/down)
                      (z/rightmost)
                      (applicate edits))]
         ;; Validate the tag.
-        (s/validate schema (z/node cloc))
+        (validator (z/node cloc))
         ;; Return the parent location.
         (z/up cloc)))))
 
