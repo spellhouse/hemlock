@@ -82,6 +82,8 @@
   [xs loc]
   (applicate loc (for [x xs] (if (fn? x) x (child x)))))
 
+;;; xml-zip helpers
+
 (defcurried attr
   [attr-name attr-val loc]
   (z/edit loc assoc-in [:attrs attr-name] attr-val))
@@ -98,7 +100,6 @@
   to the original location."
   [{:keys [node validator]
     :or {validator identity}}]
-  {:pre [(z/branch? node)]}
   (fn f [& edits]
     (fn g [ploc]
       (let [cloc (-> ploc
