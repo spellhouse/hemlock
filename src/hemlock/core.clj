@@ -61,7 +61,6 @@
            (let [~fsym (fn ~arglist ~@body)]
              ~(do-curried arglist form)))))))
 
-
 (defcurried ^:private applicate
   "Applies the composition of fs to x."
   [x fs]
@@ -89,7 +88,7 @@
 
 
 ;; ---------------------------------------------------------------------
-;; Term
+;; Term functions
 
 (defn make-term
   "Return a function f which accepts a variable number of unary 
@@ -97,11 +96,13 @@
   a zipper that appends tag and applicates edits to it. Before g returns
   the editted tag may be validated with validator. g returns focus to the
   to the original location."
-  [{:keys [tag validator] :or {validator identity}}]
+  [{:keys [node validator]
+    :or {validator identity}}]
+  {:pre [(z/branch? node)]}
   (fn f [& edits]
     (fn g [ploc]
       (let [cloc (-> ploc
-                     (z/append-child tag)
+                     (z/append-child node)
                      (z/down)
                      (z/rightmost)
                      (applicate edits))]
@@ -122,8 +123,8 @@
        (fn ~@(for [[spec & fn-body] fn-tail]
                `(~spec
                  (~tsym ~(if (variadic? spec)
-                           `(apply ~fsym ~@(normalize-args spec))
-                           `(~fsym ~@(normalize-args spec))))))))))
+                           `(apply ~fsym ~@(normalize-arglist spec))
+                           `(~fsym ~@(normalize-arglist spec))))))))))
 
 (defmacro defterm
   [name spec & fn-tail]
