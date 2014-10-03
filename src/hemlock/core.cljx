@@ -1,23 +1,40 @@
 (ns hemlock.core
   (:require
-   [clojure.zip :as z]))
+   [clojure.zip :as z])
+  #+cljs
+  (:require-macros
+   [hemlock.core :refer [defcurried]]))
 
 ;; ---------------------------------------------------------------------
 ;; Utilities
 
-;;; Currying
+;;; Macro helpers
 
+#+clj
+(defn ^:private munge-arglist
+  "Given an argument list create a new one with generated symbols."
+  [arglist]
+  (vec (for [arg arglist]
+         (if (= '& arg)
+           arg
+           (gensym "a_")))))
+
+#+clj
 (defn ^:private normalize-arglist
   "Removes variation from an argument list."
   [arglist]
   (vec (remove '#{&} arglist)))
 
+#+clj
 (defn ^:private variadic?
   "Returns true if arglist is variadic (contains &), 
   false otherwise."
   [arglist]
   (boolean (some '#{&} arglist)))
 
+;;; Currying
+
+#+clj
 (defn ^:private do-curried
   "Helper function for defcurried."
   [args form]
@@ -76,17 +93,31 @@
 (defcurried child
   "Like clojure.zip/append-child but takes it's arguments in reverse."
   [x loc]
-  (z/append-child loc x))
+  (if (z/branch? loc)
+    (z/append-child loc x)
+    (z/insert-left loc x)))
+
 
 (defcurried children
   [xs loc]
-  (applicate loc (for [x xs] (if (fn? x) x (child x)))))
+  (applicate loc (for [x xs]
+                   (cond
+                     (fn? x)
+                     x
 
-;;; xml-zip helpers
+                     (sequential? x)
+                     (children x)
 
-(defcurried attr
-  [attr-name attr-val loc]
-  (z/edit loc assoc-in [:attrs attr-name] attr-val))
+                     :else
+                     (child x)))))
+
+
+(defn edit
+  "Given a fn f and variable number of arguments return a function which
+  takes a zipper and applies zip/edit to it with f and args"
+  [f & args]
+  (fn [loc]
+    (apply z/edit loc f args)))
 
 
 ;; ---------------------------------------------------------------------
@@ -98,22 +129,42 @@
   a zipper that appends tag and applicates edits to it. Before g returns
   the editted tag may be validated with validator. g returns focus to the
   to the original location."
-  [{:keys [node validator]
-    :or {validator identity}}]
+  [{:keys [node pre post]
+    :or {pre identity
+         post identity}}]
   (fn f [& edits]
     (fn g [ploc]
+      ;; Run a pre operation on the parent node before applying edits.
+      (pre (z/node ploc))
       (let [cloc (-> ploc
                      (z/append-child node)
                      (z/down)
                      (z/rightmost)
                      (applicate edits))]
-        ;; Validate the tag.
-        (validator (z/node cloc))
+        ;; Run post operations on the child node after it has been
+        ;; appended.
+        (post (z/node cloc))
         ;; Return the parent location.
         (z/up cloc)))))
 
 
-(defmacro term [spec & fn-tail]
+(defmacro term
+  "Returns a term function whose return value is passed to the function 
+  returned by (make-term spec). The term function must return a function
+  which accepts a zipper and returns a zipper.
+  
+  Ex.
+
+    (let [span (term
+                {:node {:tag :span :content []}}
+                [& subnodes]
+                (children subnodes))]
+      (->> (z/xml-zip {:tag :body :content []})
+           ((span 1 2 3))
+           (z/root)))
+    ;; => {:tag :body, :content [{:tag :span, :content [1 2 3]}]}
+  "
+  [spec & fn-tail]
   (let [fn-tail (if (list? (first fn-tail))
                   fn-tail
                   (list fn-tail))
@@ -121,12 +172,27 @@
         fsym (gensym "f")]
     `(let [~tsym (make-term ~spec)
            ~fsym (fn ~@fn-tail)]
-       (fn ~@(for [[spec & fn-body] fn-tail]
-               `(~spec
-                 (~tsym ~(if (variadic? spec)
-                           `(apply ~fsym ~@(normalize-arglist spec))
-                           `(~fsym ~@(normalize-arglist spec))))))))))
+       (fn ~@(for [[args & fn-body] fn-tail]
+               (let [margs (munge-arglist args)
+                     nargs (normalize-arglist margs)]
+                 `(~margs
+                   (~tsym ~(if (variadic? args)
+                             `(apply ~fsym ~@nargs)
+                             `(~fsym ~@nargs))))))))))
+
 
 (defmacro defterm
+  "Define a term function by name."
   [name spec & fn-tail]
   `(def ~name (term ~spec ~@fn-tail)))
+
+
+(defn make-builder
+  [zipper default-root]
+  (assert (z/branch? (zipper default-root))
+    "default-root must be a branch? of zipper")
+  (fn [root & edits]
+    (let [[zipper edits] (if (z/branch? (zipper root))
+                           [(zipper root) edits]
+                           [(zipper default-root) (cons root edits)])]
+      (z/root (children edits zipper)))))
