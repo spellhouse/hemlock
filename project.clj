@@ -15,7 +15,7 @@
       (str base-version "." revision "-" sha))
     base-version))
 
-(defproject hemlock (project-version "0.1.0" {:release? false})
+(defproject spellhouse/hemlock (project-version "0.1.0" {:release? false})
   :description "Zipper based data construction library"
 
   :url "http://github.com/spellhouse/hemlock"
