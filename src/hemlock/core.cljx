@@ -194,5 +194,3 @@
   "Define a term function by name."
   [name spec & fn-tail]
   `(def ~name (term ~spec ~@fn-tail)))
-
-
