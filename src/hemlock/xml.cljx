@@ -31,9 +31,13 @@
   (and (map? x) (:tag x)))
 
 
+(defn attr
+  [attr-key attr-val]
+  (h/edit assoc-in [:attrs attr-key] attr-val))
+
+
 (defn ex-tag-spec
   "Return an instance of ex-info whenever spec is invalid."
-  {:private true}
   [spec]
   (when-not (tag? (get-in spec [:node]))
     (ex-info "Invalid spec value."
