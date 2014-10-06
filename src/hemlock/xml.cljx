@@ -8,11 +8,9 @@
    [clojure.zip :as z]
    [hemlock.core :as h :include-macros true]))
 
-(defn
-  xml-zip
+(defn xml-zip
   "A version of clojure.zip/xml-zip which uses :tag as the branch?
   predicate instead of (complement string?)."
-  {:private true}
   [root]
   (z/zipper :tag
             (comp seq :content)
@@ -24,7 +22,7 @@
   ^{:arglists '([root-node])}
   xml-builder
   "Return a function for constructing XML."
-  (h/build xml-zip))
+  (h/builder xml-zip))
 
 
 (defn tag?

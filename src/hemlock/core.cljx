@@ -52,7 +52,7 @@
 
 (defmacro defcurried
   "Define a curried function."
-  {:arglists '([name docstring? arglist & body])}
+  {:arglists '([name docstring? [params*] & body])}
   [name & body]
   (let [docstring (when (string? (first body))
                     (first body))
@@ -119,6 +119,15 @@
   [f & args]
   (fn [loc]
     (apply z/edit loc f args)))
+
+
+(defcurried builder
+  "Apply a variable number of edits to the zipper created by 
+  (zipper root-node) and return it's value."
+  [zipper root-node]
+  (assert (z/branch? (zipper root-node)) "root-node must be a branch? of zipper")
+  (fn [& edits]
+    (z/root (children edits (zipper root-node)))))
 
 
 ;; ---------------------------------------------------------------------
@@ -188,10 +197,3 @@
   `(def ~name (term ~spec ~@fn-tail)))
 
 
-(defcurried build
-  "Apply a variable number of edits to the zipper created by 
-  (zipper root-node) and return it's value."
-  [zipper root-node]
-  (assert (z/branch? (zipper root-node)) "root-node must be a branch? of zipper")
-  (fn [& edits]
-    (z/root (children edits (zipper root-node)))))
