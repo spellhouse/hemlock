@@ -125,7 +125,6 @@
   "Apply a variable number of edits to the zipper created by 
   (zipper root-node) and return it's value."
   [zipper root-node]
-  (assert (z/branch? (zipper root-node)) "root-node must be a branch? of zipper")
   (fn [& edits]
     (z/root (children edits (zipper root-node)))))
 
