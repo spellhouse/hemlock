@@ -188,26 +188,10 @@
   `(def ~name (term ~spec ~@fn-tail)))
 
 
-(defn- xml-zip
-  "A more correct version of clojure.zip/xml-zip which uses :tag as the 
-  branch? predicate instead of (complement string?)."
-  [root]
-  (z/zipper :tag
-            (comp seq :content)
-            (fn [node children]
-              (assoc node :content (and children (apply vector children))))
-            root))
-
-(defn make-builder
-  [zipper default-root]
-  (assert (z/branch? (zipper default-root))
-    "default-root must be a branch? of zipper")
-  (let [;; clojure.zip/xml-zip is broken see above.
-        zipper (if (= z/xml-zip zipper)
-                 xml-zip
-                 zipper)]
-    (fn [root & edits]
-      (let [[loc edits] (if (z/branch? (zipper root))
-                          [(zipper root) edits]
-                          [(zipper default-root) (cons root edits)])]
-        (z/root (children edits loc))))))
+(defcurried build
+  "Apply a variable number of edits to the zipper created by 
+  (zipper root-node) and return it's value."
+  [zipper root-node]
+  (assert (z/branch? (zipper root-node)) "root-node must be a branch? of zipper")
+  (fn [& edits]
+    (z/root (children edits (zipper root-node)))))
