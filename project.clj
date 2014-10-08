@@ -1,21 +1,24 @@
 (require '[clojure.java.shell])
 
+(defn ^String system
+  [^String command]
+  (->> (into [] (.split command "\\s+"))
+       (apply clojure.java.shell/sh)
+       (:out)
+       (.trim)))
+
 (defn project-version
   "Return the current version string."
-  [base-version {release? :release?}]
+  [base-version & {:keys [since release?]}]
   (if-not (true? release?)
-    (let [last-commit (-> (clojure.java.shell/sh "git" "rev-parse" "HEAD")
-                          (:out)
-                          (.trim))
-          revision (-> (clojure.java.shell/sh "git" (str "rev-list.." last-commit))
-                       (:out)
-                       (.. trim (split "\\n"))
-                       (count))
-          sha (subs last-commit 0 6)]
-      (str base-version "." revision "-" sha))
+    (let [patch (-> (system (str "git describe --match " since))
+                    (.split "-" 2)
+                    (second))
+          [_ major-minor] (re-matches #"(\d+\.\d+)\.\d+" base-version)]
+      (str major-minor "." patch))
     base-version))
 
-(defproject spellhouse/hemlock (project-version "0.1.0" {:release? false})
+(defproject spellhouse/hemlock (project-version "0.1.0" :since "0.0" :release? false)
   :description "Zipper based data construction library"
 
   :url "http://github.com/spellhouse/hemlock"
