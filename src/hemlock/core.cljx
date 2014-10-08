@@ -193,4 +193,9 @@
 (defmacro defterm
   "Define a term function by name."
   [name spec & fn-tail]
-  `(def ~name (term ~spec ~@fn-tail)))
+  (let [arglists (if (seq? (first fn-tail))
+                   (map first fn-tail)
+                   (list (first fn-tail)))
+        sym (vary-meta name assoc :arglists `'(~@arglists))]
+    `(def ~sym
+       (term ~spec ~@fn-tail))))
