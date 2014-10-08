@@ -144,7 +144,7 @@
   (fn f [& edits]
     (fn g [ploc]
       ;; Run a pre operation on the parent node before applying edits.
-      (pre (z/node ploc))
+      (pre ploc)
       (let [cloc (-> ploc
                      (z/append-child node)
                      (z/down)
@@ -152,7 +152,7 @@
                      (applicate edits))]
         ;; Run post operations on the child node after it has been
         ;; appended.
-        (post (z/node cloc))
+        (post cloc)
         ;; Return the parent location.
         (z/up cloc)))))
 
