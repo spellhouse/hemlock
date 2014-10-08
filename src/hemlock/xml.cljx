@@ -56,10 +56,12 @@
 
        (h/defterm ~sym
          ~spec
-         [& [attrs# & content#]]
-         (if (and (map? attrs#)
-                  (not (tag? attrs#)))
-           (comp
-            (h/edit update-in [:attrs] merge attrs#)
-            (h/children content#))
-           (h/children (cons attrs# content#)))))))
+         [& [attrs# & content# :as args#]]
+         (if (seq args#)
+           (if (and (map? attrs#)
+                    (not (tag? attrs#)))
+             (comp
+              (h/edit update-in [:attrs] merge attrs#)
+              (h/children content#))
+             (h/children (cons attrs# content#)))
+           (h/pass))))))
