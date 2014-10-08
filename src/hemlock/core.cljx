@@ -196,6 +196,8 @@
   (let [arglists (if (seq? (first fn-tail))
                    (map first fn-tail)
                    (list (first fn-tail)))
-        sym (vary-meta name assoc :arglists `'(~@arglists))]
+        sym (if-not (:arglists (meta name))
+              (vary-meta name assoc :arglists `'(~@arglists))
+              name)]
     `(def ~sym
        (term ~spec ~@fn-tail))))
