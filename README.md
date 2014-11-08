@@ -2,7 +2,7 @@
 
 ## Usage
 
-[![Clojars Project](http://clojars.org/spellhouse/hemlock/latest-version.svg)]
+![Clojars Project](http://clojars.org/spellhouse/hemlock/latest-version.svg)
 
 ## License
 
